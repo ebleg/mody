@@ -18,26 +18,27 @@ from sympy.utilities.lambdify import lambdify
 
 import parameters as par
 
-# --------------------------------------------------
-# Lagrangian dynamics
-# --------------------------------------------------
-
+# For shorter expressions
 mechanics_printing(pretty_print=False)
 
-# ---------------- Define symbols ------------------
+# ----------------------------------------------------------------------------
+#                                Define symbols
+# ----------------------------------------------------------------------------
+
+# Generalized coordinates
 n_coords = 3
 q = dynamicsymbols("q:" + str(n_coords))
 dq = dynamicsymbols("q:" + str(n_coords), level=1)
 
+# Mass and link lengths
 m_links = symbols("m_l:2")
 d_links = symbols("d_l:2")
-m_point = symbols("m_A m_B m_C")
-m_cart = symbols("m_cart")
+m_point = symbols("m_cart m_A m_B m_C")  # for point objects
 
-b_cart, b_joint = symbols("b_cart b_joint")
+b_cart, b_joint = symbols("b_cart b_joint")  # Viscous damping
 
-g, t = symbols("g, t")
-k, l0 = symbols("k l0")
+g, t = symbols("g, t")  # General parameters
+k, l0 = symbols("k l0")  # Spring parameters
 
 # Lists to store the objects
 particles = []
@@ -46,18 +47,12 @@ points = []
 com = []
 frames = []
 
-# Reference frames
+# ----------------------------------------------------------------------------
+#                               Reference frames
+# ----------------------------------------------------------------------------
+
 N = ReferenceFrame("N")  # Inertial reference frame
 (origin := Point("O")).set_vel(N, 0)  # Set velocity to zero
-
-# --------------------- Cart -----------------------
-
-# Define center of mass for the cart; set position to q0
-(com_cart := origin.locatenew("com_cart", q[0]*N.x)).set_vel(N, dq[0]*N.x)
-
-particles.append(Particle("cart", com_cart, m_cart))  # Define particle
-
-# ------------------- Pendulum ---------------------
 
 pend_frame = N.orientnew("pend", "axis", (q[1], N.z))
 pend_frame.set_ang_vel(N, dq[1]*N.z)
@@ -70,59 +65,107 @@ link1_frame.set_ang_vel(pend_frame, dq[2]*pend_frame.z)
 link2_frame = pend_frame.orientnew("link_2", "axis", (-q[2], pend_frame.z))
 link2_frame.set_ang_vel(pend_frame, -dq[2]*pend_frame.z)
 
+# Compute angle between upper and lower links
 beta = q[2] + asin(d_links[0]/d_links[1]*sin(q[2]))
 beta_dot = beta.diff(t).simplify()
 
-link3_frame = link1_frame.orientnew("link_3",
-                                    "axis", (-beta, link1_frame.z))
+# Link 3: lower left link
+link3_frame = link1_frame.orientnew("link_3", "axis", (-beta, link1_frame.z))
 link3_frame.set_ang_vel(link1_frame, -beta_dot*link1_frame.z)
 
-link4_frame = link2_frame.orientnew("link_4",
-                                    "axis", (beta, link2_frame.z))
+# Link 4: lower right link
+link4_frame = link2_frame.orientnew("link_4", "axis", (beta, link2_frame.z))
 link4_frame.set_ang_vel(link2_frame, beta_dot*link2_frame.z)
 
 frames = (link1_frame, link2_frame, link3_frame, link4_frame)
 
-# Set points
+
+# ----------------------------------------------------------------------------
+#                                 Point masses
+# ----------------------------------------------------------------------------
+
+# Define center of mass for the cart; set position to q0
+(com_cart := origin.locatenew("com_cart", q[0]*N.x)).set_vel(N, dq[0]*N.x)
+
+# Set point locations and their velocities
 A = com_cart.locatenew("A", link1_frame.y*d_links[0])
+A.v2pt_theory(com_cart, N, link1_frame)
 B = com_cart.locatenew("B", link2_frame.y*d_links[0])
+B.v2pt_theory(com_cart, N, link2_frame)
 C = A.locatenew("C", link3_frame.y*d_links[1])
+C.v2pt_theory(A, N, link3_frame)
 
-# Define corresponding particles
-for i in range(3):
-    pnt = [A, B, C][i]
-    pnt.set_vel(N, pnt.pos_from(origin).dt(N).simplify())
-    part = Particle(pnt.name, pnt, m_point[i])
-    part.potential_energy = (-m_point[i]*g
-                             * N.y.dot(pnt.pos_from(origin)))
-    particles.append(part)
+# Assemble points and particles in a list
+points = (com_cart, A, B, C)
+particles = [Particle(points[i].name, points[i], m_point[i])
+             for i in range(4)]
 
-# Rigid bodies for each link
-# Define center of mass
-com.append(com_cart.locatenew("com1", 0.5*link1_frame.y*d_links[0]))
-com.append(com_cart.locatenew("com2", 0.5*link2_frame.y*d_links[0]))
-com.append(A.locatenew("com3", 0.5*link3_frame.y*d_links[1]))
-com.append(B.locatenew("com4", 0.5*link4_frame.y*d_links[1]))
+
+# ----------------------------------------------------------------------------
+#                                 Rigid bodies
+# ----------------------------------------------------------------------------
+
+# ---------------------------- Define mass centers ---------------------------
+
+com1 = com_cart.locatenew("com1", 0.5*link1_frame.y*d_links[0])  # Link 1
+com1.v2pt_theory(com_cart, N, link1_frame)
+
+com2 = com_cart.locatenew("com2", 0.5*link2_frame.y*d_links[0])  # Link 2
+com2.v2pt_theory(com_cart, N, link2_frame)
+
+com3 = A.locatenew("com3", 0.5*link3_frame.y*d_links[1])  # Link 3
+com3.v2pt_theory(A, N, link3_frame)
+
+com4 = B.locatenew("com4", 0.5*link4_frame.y*d_links[1])  # Link 4
+com4.v2pt_theory(B, N, link4_frame)
+
+com = (com1, com2, com3, com4)
+
+# ------------------------------- Rigid bodies -------------------------------
 
 for i in range(4):
-    com[i].set_vel(N, com[i].pos_from(origin).dt(N).simplify())
     j = floor(i/2)  # Index for link mass and length
     links.append(RigidBody(f"link{i}", com[i], frames[i],
                            m_links[j],
                            (inertia(frames[0], 0, 0, m_links[j]/12
                                     * d_links[j]**2), com[i])))
-    links[i].potential_energy = (-m_links[j]*g
-                                 * N.y.dot(com[i].pos_from(origin)))
 
-T = kinetic_energy(N, *particles, *links)
-V = potential_energy(*particles, *links)
+
+# ----------------------------------------------------------------------------
+#                          Compute energy expressions
+# ----------------------------------------------------------------------------
+
+def set_pot_grav_energy(thing):
+    # Set the potential gravitational energy for either a Particle or RigidBody
+    # based on its height in the inertial frame N.
+    try:
+        point = thing.point
+    except AttributeError:
+        point = thing.masscenter
+
+    height = point.pos_from(origin).dot(N.y).simplify()
+    thing.potential_energy = -height*thing.mass*g
+    return thing
+
+
+particles = list(map(set_pot_grav_energy, particles))
+links = list(map(set_pot_grav_energy, links))
+
+T = kinetic_energy(N, *particles, *links)  # Kinetic energy
+V = potential_energy(*particles, *links)  # Potential energy
 
 # Add the contribution of the spring
 V += simplify(0.5*k*(A.pos_from(B).magnitude() - l0)**2)
 
-L = T - V
 
-# Friction torques
+# ----------------------------------------------------------------------------
+#                              Equations of motion
+# ----------------------------------------------------------------------------
+
+L = T - V  # Lagrangian
+
+# ----------------------------- Friction torques ----------------------------- #
+
 # N.z is used because all z-axis are parallel
 torques = [(pend_frame, -b_joint*dq[1]*N.z),
 
@@ -141,9 +184,9 @@ LM = LagrangesMethod(L, q, forcelist=torques, frame=N)
 LM.form_lagranges_equations()
 
 # Perform simulation
-sym_pars = [*m_links, *d_links, *m_point, b_cart, b_joint, m_cart, g, k, l0]
+sym_pars = [*m_links, *d_links, *m_point, b_cart, b_joint, g, k, l0]
 num_pars = [*par.m_links, *par.d_links, *par.m_point, par.b_cart, par.b_joint,
-            par.m_cart, par.g, par.k, par.l0]
+            par.g, par.k, par.l0]
 
 subs_dict = {sym_pars[i]: num_pars[i] for i in range(len(sym_pars))}
 
