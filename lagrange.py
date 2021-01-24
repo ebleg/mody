@@ -32,6 +32,8 @@ d_links = symbols("d_l:2")
 m_point = symbols("m_A m_B m_C")
 m_cart = symbols("m_cart")
 
+b_cart, b_joint = symbols("b_cart b_joint")
+
 g, t = symbols("g, t")
 k, l0 = symbols("k l0")
 
@@ -59,24 +61,23 @@ pend_frame = N.orientnew("pend", "axis", (q[1], N.z))
 pend_frame.set_ang_vel(N, dq[1]*N.z)
 
 # Link 1: upper left link
-link1_frame = pend_frame.orientnew("link_1",
-                                   "axis", (q[2], pend_frame.z))
+link1_frame = pend_frame.orientnew("link_1", "axis", (q[2], pend_frame.z))
 link1_frame.set_ang_vel(pend_frame, dq[2]*pend_frame.z)
 
 # Link 2: upper right link
-link2_frame = pend_frame.orientnew("link_2",
-                                   "axis", (-q[2], pend_frame.z))
+link2_frame = pend_frame.orientnew("link_2", "axis", (-q[2], pend_frame.z))
 link2_frame.set_ang_vel(pend_frame, -dq[2]*pend_frame.z)
 
 beta = q[2] + asin(d_links[0]/d_links[1]*sin(q[2]))
+beta_dot = beta.diff(t).simplify()
 
 link3_frame = link1_frame.orientnew("link_3",
                                     "axis", (-beta, link1_frame.z))
-link3_frame.set_ang_vel(link1_frame, -beta.diff(t)*link1_frame.z)
+link3_frame.set_ang_vel(link1_frame, -beta_dot*link1_frame.z)
 
 link4_frame = link2_frame.orientnew("link_4",
                                     "axis", (beta, link2_frame.z))
-link4_frame.set_ang_vel(link2_frame, beta.diff(t)*link2_frame.z)
+link4_frame.set_ang_vel(link2_frame, beta_dot*link2_frame.z)
 
 frames = (link1_frame, link2_frame, link3_frame, link4_frame)
 
@@ -88,7 +89,7 @@ C = A.locatenew("C", link3_frame.y*d_links[1])
 # Define corresponding particles
 for i in range(3):
     pnt = [A, B, C][i]
-    pnt.set_vel(N, pnt.pos_from(origin).dt(N))
+    pnt.set_vel(N, pnt.pos_from(origin).dt(N).simplify())
     part = Particle(pnt.name, pnt, m_point[i])
     part.potential_energy = (-m_point[i]*g
                              * N.y.dot(pnt.pos_from(origin)))
@@ -102,7 +103,7 @@ com.append(A.locatenew("com3", 0.5*link3_frame.y*d_links[1]))
 com.append(B.locatenew("com4", 0.5*link4_frame.y*d_links[1]))
 
 for i in range(4):
-    com[i].set_vel(N, com[i].pos_from(origin).dt(N))
+    com[i].set_vel(N, com[i].pos_from(origin).dt(N).simplify())
     j = floor(i/2)  # Index for link mass and length
     links.append(RigidBody(f"link{i}", com[i], frames[i],
                            m_links[j],
