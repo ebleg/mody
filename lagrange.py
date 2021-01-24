@@ -1,3 +1,5 @@
+import dill
+
 from math import floor
 
 import numpy as np
@@ -148,13 +150,16 @@ M_num = LM.mass_matrix_full.subs(subs_dict)
 F_num = LM.forcing_full.subs(subs_dict)
 
 fun_args = (*q, *dq)
-M_func = lambdify([fun_args], M_num)
-F_func = lambdify([fun_args], F_num)
+M_func = lambdify([fun_args], M_num, modules="scipy")
+F_func = lambdify([fun_args], F_num, modules="scipy")
 
 
 def f(x, t):
     return np.array(solve(M_func(x), F_func(x))).T[0]
 
+
+dill.settings['recurse'] = True
+dill.dump(f, open("f_dyn", "wb"))
 
 if __name__ == "__main__":
     t = np.linspace(0, 4, num=300)
