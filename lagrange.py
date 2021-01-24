@@ -122,6 +122,7 @@ V += simplify(0.5*k*(A.pos_from(B).magnitude() - l0)**2)
 
 L = T - V
 
+# Friction torques
 # N.z is used because all z-axis are parallel
 torques = [(pend_frame, -b_joint*dq[1]*N.z),
 
@@ -161,6 +162,7 @@ def f(x, t):
 dill.settings['recurse'] = True
 dill.dump(f, open("f_dyn", "wb"))
 
+# Test
 if __name__ == "__main__":
     t = np.linspace(0, 4, num=300)
     # x0 = np.array([0, 0, 1.2*np.pi/6, 0, 0, 0])
