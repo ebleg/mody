@@ -9,5 +9,5 @@ g = 9.81
 k = 200.
 l0 = 1
 
-b_joint = 0.1
+b_joint = 2 
 b_cart = 0.1

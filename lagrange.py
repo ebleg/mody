@@ -10,17 +10,17 @@ from sympy import symbols, asin, sin, simplify
 from sympy.physics.mechanics import (
              Particle, Point, ReferenceFrame, RigidBody,
              dynamicsymbols, inertia, kinetic_energy,
-             potential_energy, LagrangesMethod)
+             potential_energy, LagrangesMethod, mechanics_printing)
 from sympy.vector import express
 from sympy.utilities.lambdify import lambdify
 
 import parameters as par
 
-# Clear terminal output
-
 # --------------------------------------------------
 # Lagrangian dynamics
 # --------------------------------------------------
+
+mechanics_printing(pretty_print=False)
 
 # ---------------- Define symbols ------------------
 n_coords = 3
@@ -120,13 +120,27 @@ V += simplify(0.5*k*(A.pos_from(B).magnitude() - l0)**2)
 
 L = T - V
 
-LM = LagrangesMethod(L, q, frame=N)
+# N.z is used because all z-axis are parallel
+torques = [(pend_frame, -b_joint*dq[1]*N.z),
+
+           (link1_frame, -b_joint*2*dq[2]*N.z),
+           (link2_frame, b_joint*2*dq[2]*N.z),
+
+           (link1_frame, -b_joint*(beta_dot)*N.z),
+           (link2_frame, b_joint*(beta_dot)*N.z),
+           (link3_frame, b_joint*(beta_dot)*N.z),
+           (link4_frame, -b_joint*(beta_dot)*N.z),
+
+           (link3_frame, -b_joint*2*(beta_dot - dq[2])*N.z),
+           (link4_frame, b_joint*2*(beta_dot - dq[2])*N.z)]
+
+LM = LagrangesMethod(L, q, forcelist=torques, frame=N)
 LM.form_lagranges_equations()
 
 # Perform simulation
-sym_pars = [*m_links, *d_links, *m_point, m_cart, g, k, l0]
-num_pars = [*par.m_links, *par.d_links, *par.m_point, par.m_cart,
-            par.g, par.k, par.l0]
+sym_pars = [*m_links, *d_links, *m_point, b_cart, b_joint, m_cart, g, k, l0]
+num_pars = [*par.m_links, *par.d_links, *par.m_point, par.b_cart, par.b_joint,
+            par.m_cart, par.g, par.k, par.l0]
 
 subs_dict = {sym_pars[i]: num_pars[i] for i in range(len(sym_pars))}
 
@@ -144,7 +158,8 @@ def f(x, t):
 
 if __name__ == "__main__":
     t = np.linspace(0, 4, num=300)
-    x0 = np.array([0, 0, 1.2*np.pi/6, 0, 0, 0])
+    # x0 = np.array([0, 0, 1.2*np.pi/6, 0, 0, 0])
+    x0 = np.array([0, np.pi/6, np.pi/6, 0, 0, 0])
     y = odeint(f, x0, t)
 
     fig, ax = plt.subplots(3, 1)
