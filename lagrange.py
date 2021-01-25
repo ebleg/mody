@@ -13,7 +13,6 @@ from sympy.physics.mechanics import (
              Particle, Point, ReferenceFrame, RigidBody,
              dynamicsymbols, inertia, kinetic_energy,
              potential_energy, LagrangesMethod, mechanics_printing)
-from sympy.vector import express
 from sympy.utilities.lambdify import lambdify
 
 import parameters as par
@@ -39,6 +38,7 @@ b_cart, b_joint = symbols("b_cart b_joint")  # Viscous damping
 
 g, t = symbols("g, t")  # General parameters
 k, l0 = symbols("k l0")  # Spring parameters
+F = symbols("F")  # Input force; both motor and hydraulic brake
 
 # Lists to store the objects
 particles = []
@@ -46,6 +46,8 @@ links = []
 points = []
 com = []
 frames = []
+
+sym_pars = [*m_links, *d_links, *m_point, b_cart, b_joint, g, k, l0]
 
 # ----------------------------------------------------------------------------
 #                               Reference frames
@@ -151,73 +153,62 @@ def set_pot_grav_energy(thing):
 particles = list(map(set_pot_grav_energy, particles))
 links = list(map(set_pot_grav_energy, links))
 
-T = kinetic_energy(N, *particles, *links)  # Kinetic energy
-V = potential_energy(*particles, *links)  # Potential energy
-
-# Add the contribution of the spring
-V += simplify(0.5*k*(A.pos_from(B).magnitude() - l0)**2)
-
 
 # ----------------------------------------------------------------------------
 #                              Equations of motion
 # ----------------------------------------------------------------------------
 
-L = T - V  # Lagrangian
+if __name__ == "__main__":  # Do not perform derivation when imported
 
-# ----------------------------- Friction torques ----------------------------- #
+    simplify_exps = True
 
-# N.z is used because all z-axis are parallel
-torques = [(pend_frame, -b_joint*dq[1]*N.z),
+    T = kinetic_energy(N, *particles, *links)  # Kinetic energy
+    V = potential_energy(*particles, *links)  # Potential energy
 
-           (link1_frame, -b_joint*2*dq[2]*N.z),
-           (link2_frame, b_joint*2*dq[2]*N.z),
+    # Add the contribution of the spring
+    V += simplify(0.5*k*(A.pos_from(B).magnitude() - l0)**2)
 
-           (link1_frame, -b_joint*(beta_dot)*N.z),
-           (link2_frame, b_joint*(beta_dot)*N.z),
-           (link3_frame, b_joint*(beta_dot)*N.z),
-           (link4_frame, -b_joint*(beta_dot)*N.z),
+    if simplify_exps:
+        T = T.simplify()
+        V = V.simplify()
 
-           (link3_frame, -b_joint*2*(beta_dot - dq[2])*N.z),
-           (link4_frame, b_joint*2*(beta_dot - dq[2])*N.z)]
+    L = T - V  # Lagrangian
 
-LM = LagrangesMethod(L, q, forcelist=torques, frame=N)
-LM.form_lagranges_equations()
+    # -------------------------- Friction torques -----------------------------
+    # N.z is used because all z-axis are parallel
+    torques = [(pend_frame, -b_joint*dq[1]*N.z),
 
-# Perform simulation
-sym_pars = [*m_links, *d_links, *m_point, b_cart, b_joint, g, k, l0]
-num_pars = [*par.m_links, *par.d_links, *par.m_point, par.b_cart, par.b_joint,
-            par.g, par.k, par.l0]
+               (link1_frame, -b_joint*2*dq[2]*N.z),
+               (link2_frame, b_joint*2*dq[2]*N.z),
 
-subs_dict = {sym_pars[i]: num_pars[i] for i in range(len(sym_pars))}
+               (link1_frame, -b_joint*(beta_dot)*N.z),
+               (link2_frame, b_joint*(beta_dot)*N.z),
+               (link3_frame, b_joint*(beta_dot)*N.z),
+               (link4_frame, -b_joint*(beta_dot)*N.z),
 
-M_num = LM.mass_matrix_full.subs(subs_dict)
-F_num = LM.forcing_full.subs(subs_dict)
+               (link3_frame, -b_joint*2*(beta_dot - dq[2])*N.z),
+               (link4_frame, b_joint*2*(beta_dot - dq[2])*N.z)]
 
-fun_args = (*q, *dq)
-M_func = lambdify([fun_args], M_num, modules="scipy")
-F_func = lambdify([fun_args], F_num, modules="scipy")
+    forces = [(com_cart, -b_cart*dq[0]*N.x),  # Rolling resistance of the cart
+              (com_cart, F)]
 
+    LM = LagrangesMethod(L, q, forcelist=torques, frame=N)
+    LM.form_lagranges_equations()
 
-def f(x, t):
-    return np.array(solve(M_func(x), F_func(x))).T[0]
+    M_symb = LM.mass_matrix_full
+    F_symb = LM.forcing_full
 
+    if simplify_exps:
+        M_symb = M_symb.simplify()
+        F_symb = F_symb.simplify()
 
-dill.settings['recurse'] = True
-dill.dump(f, open("f_dyn", "wb"))
+    fun_args = [(*q, *dq), F, *sym_pars]
+    M_func = lambdify(fun_args, M_symb, modules="scipy")
+    F_func = lambdify(fun_args, F_symb, modules="scipy")
 
-# Test
-if __name__ == "__main__":
-    t = np.linspace(0, 4, num=300)
-    # x0 = np.array([0, 0, 1.2*np.pi/6, 0, 0, 0])
-    x0 = np.array([0, np.pi/6, np.pi/6, 0, 0, 0])
-    y = odeint(f, x0, t)
+    def f(qdq, *sym_pars):
+        return np.array(solve(M_func(qdq, *sym_pars),
+                              F_func(qdq, *sym_pars))).T[0]
 
-    fig, ax = plt.subplots(3, 1)
-    ax[0].plot(t, y[:, 0])
-    ax[0].set_title("Cart position")
-    ax[1].plot(t, y[:, 1])
-    ax[1].set_title("Pendulum angle")
-    ax[2].plot(t, y[:, 2])
-    ax[2].set_title("Link angle")
-    fig.tight_layout()
-    fig.show()
+    dill.settings['recurse'] = True
+    dill.dump(f, open("f_dyn", "wb"))
