@@ -15,6 +15,7 @@ from sympy.physics.mechanics import (
              potential_energy, LagrangesMethod, mechanics_printing)
 from sympy.utilities.lambdify import lambdify
 from sympy.simplify import trigsimp
+from sympy.physics.vector import vlatex
 
 import parameters as par
 
@@ -230,5 +231,7 @@ if __name__ == "__main__":  # Do not perform derivation when imported
     dill.dump(A_func, open("A_func", "wb"))
     dill.dump(B_func, open("B_func", "wb"))
     dill.dump(C_func, open("C_func", "wb"))
+
+    print(vlatex(T))
 
 # approx = SeriesApprox({q[0]: (-np.pi/2, np.pi/2), q[1]: (-np.pi/2, np.pi/2), q[2]: (-np.pi/2, np.pi/2), dq[0]: (-15, 15), dq[1]: (-15, 15), dq[2]: (-15, 15) }, reltol=1e-3)
