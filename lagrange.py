@@ -57,7 +57,7 @@ N = ReferenceFrame("N")  # Inertial reference frame
 (origin := Point("O")).set_vel(N, 0)  # Set velocity to zero
 
 pend_frame = N.orientnew("pend", "axis", (q[1], N.z))
-pend_frame.set_ang_vel(N, dq[1]*N.z)
+# pend_frame.set_ang_vel(N, dq[1]*N.z)
 
 # Link 1: upper left link
 link1_frame = pend_frame.orientnew("link_1", "axis", (q[2], pend_frame.z))
@@ -160,7 +160,7 @@ links = list(map(set_pot_grav_energy, links))
 
 if __name__ == "__main__":  # Do not perform derivation when imported
 
-    simplify_exps = True
+    simplify_exps = False
 
     T = kinetic_energy(N, *particles, *links)  # Kinetic energy
     V = potential_energy(*particles, *links)  # Potential energy
@@ -190,9 +190,9 @@ if __name__ == "__main__":  # Do not perform derivation when imported
                (link4_frame, b_joint*2*(beta_dot - dq[2])*N.z)]
 
     forces = [(com_cart, -b_cart*dq[0]*N.x),  # Rolling resistance of the cart
-              (com_cart, F)]
+              (com_cart, F*N.x)]
 
-    LM = LagrangesMethod(L, q, forcelist=torques, frame=N)
+    LM = LagrangesMethod(L, q, forcelist=torques + forces, frame=N)
     LM.form_lagranges_equations()
 
     M_symb = LM.mass_matrix_full

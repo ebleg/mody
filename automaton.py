@@ -3,6 +3,7 @@ from numpy import genfromtxt
 
 
 # Best regexp (alarm): (0|1)*111((0111(0|1)?)|(00111)|111(0|1)?(0|1)?)$
+# Best regexp (certainly not): (0|1)*(000|010|100|001)$
 
 
 def csv_to_transition_table(fname):
