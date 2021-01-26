@@ -7,7 +7,7 @@ d_links = [1., 0.75]
 g = 9.81
 
 # Spring parameters
-k = 200.
+k = 400.
 l0 = 1
 
 # Viscous friction

@@ -65,6 +65,6 @@ if __name__ == "__main__":
 
     byte_seq_certain = {num for num in byte_seq if re.search(pattern, num)}
 
-    table = csv_to_transition_table("transition_dfa.csv")
+    table = csv_to_transition_table("dfa_certain.csv")
 
     dfa_alarm = DFA(table, [12] + list(range(14, 21)), 1)

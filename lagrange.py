@@ -14,6 +14,7 @@ from sympy.physics.mechanics import (
              dynamicsymbols, inertia, kinetic_energy,
              potential_energy, LagrangesMethod, mechanics_printing)
 from sympy.utilities.lambdify import lambdify
+from sympy.simplify import trigsimp
 
 import parameters as par
 
@@ -48,6 +49,9 @@ com = []
 frames = []
 
 sym_pars = [*m_links, *d_links, *m_point, b_cart, b_joint, g, k, l0]
+num_pars = [*par.m_links, *par.d_links, *par.m_point, par.b_cart, par.b_joint,
+            par.g, par.k, par.l0]
+subs_dict = dict(zip(sym_pars, num_pars))
 
 # ----------------------------------------------------------------------------
 #                               Reference frames
@@ -153,7 +157,6 @@ def set_pot_grav_energy(thing):
 particles = list(map(set_pot_grav_energy, particles))
 links = list(map(set_pot_grav_energy, links))
 
-
 # ----------------------------------------------------------------------------
 #                              Equations of motion
 # ----------------------------------------------------------------------------
@@ -162,15 +165,17 @@ if __name__ == "__main__":  # Do not perform derivation when imported
 
     simplify_exps = False
 
-    T = kinetic_energy(N, *particles, *links)  # Kinetic energy
+    T = 0
+    for obj in (*particles, *links):
+        T += trigsimp(obj.kinetic_energy(N))
+        print(f"Included {obj} in T")
+    
+    #sum([obj.kinetic_energy(N).simplify() for obj in (*particles, *links)])
+    #T = kinetic_energy(N, *particles, *links)  # Kinetic energy
     V = potential_energy(*particles, *links)  # Potential energy
 
     # Add the contribution of the spring
     V += simplify(0.5*k*(A.pos_from(B).magnitude() - l0)**2)
-
-    if simplify_exps:
-        T = T.simplify()
-        V = V.simplify()
 
     L = T - V  # Lagrangian
 
@@ -182,8 +187,9 @@ if __name__ == "__main__":  # Do not perform derivation when imported
                (link2_frame, b_joint*2*dq[2]*N.z),
 
                (link1_frame, -b_joint*(beta_dot)*N.z),
-               (link2_frame, b_joint*(beta_dot)*N.z),
                (link3_frame, b_joint*(beta_dot)*N.z),
+
+               (link2_frame, b_joint*(beta_dot)*N.z),
                (link4_frame, -b_joint*(beta_dot)*N.z),
 
                (link3_frame, -b_joint*2*(beta_dot - dq[2])*N.z),
@@ -198,17 +204,31 @@ if __name__ == "__main__":  # Do not perform derivation when imported
     M_symb = LM.mass_matrix_full
     F_symb = LM.forcing_full
 
-    if simplify_exps:
-        M_symb = M_symb.simplify()
-        F_symb = F_symb.simplify()
-
-    fun_args = [(*q, *dq), F, *sym_pars]
+    fun_args = [*q, *dq, F, *sym_pars]
     M_func = lambdify(fun_args, M_symb, modules="scipy")
     F_func = lambdify(fun_args, F_symb, modules="scipy")
 
-    def f(qdq, *sym_pars):
-        return np.array(solve(M_func(qdq, *sym_pars),
-                              F_func(qdq, *sym_pars))).T[0]
+    fun_args2 = [*q, *dq, *sym_pars]
+    T_func = lambdify(fun_args2, T, modules="scipy")
+    V_func = lambdify(fun_args2, V, modules="scipy")
+
+    A_func = lambdify(fun_args2, A.pos_from(origin).to_matrix(N).simplify()[:2],
+                      modules="scipy")
+    B_func = lambdify(fun_args2, B.pos_from(origin).to_matrix(N).simplify()[:2],
+                      modules="scipy")
+    C_func = lambdify(fun_args2, C.pos_from(origin).to_matrix(N).simplify()[:2],
+                      modules="scipy")
+
+    def f(*args):
+        return np.array(solve(M_func(*args),
+                              F_func(*args))).T[0]
 
     dill.settings['recurse'] = True
     dill.dump(f, open("f_dyn", "wb"))
+    dill.dump(T_func, open("T_func", "wb"))
+    dill.dump(V_func, open("V_func", "wb"))
+    dill.dump(A_func, open("A_func", "wb"))
+    dill.dump(B_func, open("B_func", "wb"))
+    dill.dump(C_func, open("C_func", "wb"))
+
+# approx = SeriesApprox({q[0]: (-np.pi/2, np.pi/2), q[1]: (-np.pi/2, np.pi/2), q[2]: (-np.pi/2, np.pi/2), dq[0]: (-15, 15), dq[1]: (-15, 15), dq[2]: (-15, 15) }, reltol=1e-3)
