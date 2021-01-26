@@ -51,9 +51,24 @@ class DFA(object):
     def accepted(self):
         return self.state in self.acceptance_states
 
+# Merges multiple DFA objects together
+class Moore(object):
+    def __init__(self, output_map, dfas):
+        # Expects an output map and a list of DFA's  
+        self.dfas = dfas
+        self.output_map = output_map
 
-# class Mealy(object):
-#     def __init__(output_map, *args):
+    @property
+    def state(self):
+        return (dfa.state for dfa in self.dfas)
+
+    @property
+    def output(self):
+        return self.output_map(self)
+
+    def go(self, inputs):
+        for dfa in self.dfas: dfa.go(inputs)
+
 
 
 if __name__ == "__main__":
@@ -65,6 +80,18 @@ if __name__ == "__main__":
 
     byte_seq_certain = {num for num in byte_seq if re.search(pattern, num)}
 
-    table = csv_to_transition_table("dfa_certain.csv")
+    table_alarm = csv_to_transition_table("dfa_alarm.csv")
+    table_no_alarm = csv_to_transition_table("dfa_no_alarm.csv")
 
-    dfa_alarm = DFA(table, [12] + list(range(14, 21)), 1)
+    def machine_output(machine):
+        if (not machine.dfas[0].accepted) and (not machine.dfas[1].accepted):
+            return "D"
+        elif (machine.dfas[0].accepted) and (not machine.dfas[1].accepted):
+            return "A"
+        else:
+            return "O"
+
+
+    dfa_alarm = DFA(table_alarm, [12] + list(range(14, 21)), 1)
+    dfa_no_alarm = DFA(table_no_alarm, [7, 8, 9], 1)
+    machine = Moore(machine_output, [dfa_alarm, dfa_no_alarm])
