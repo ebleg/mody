@@ -60,7 +60,7 @@ class Moore(object):
 
     @property
     def state(self):
-        return (dfa.state for dfa in self.dfas)
+        return [dfa.state for dfa in self.dfas]
 
     @property
     def output(self):
@@ -68,8 +68,11 @@ class Moore(object):
 
     def go(self, inputs):
         for dfa in self.dfas: dfa.go(inputs)
+        return self.output
 
-
+    @property
+    def past_states(self):
+        return list(zip(*[dfa.past_states for dfa in self.dfas]))
 
 if __name__ == "__main__":
     # Generate all possible 8-bit sequences
@@ -87,11 +90,29 @@ if __name__ == "__main__":
         if (not machine.dfas[0].accepted) and (not machine.dfas[1].accepted):
             return "D"
         elif (machine.dfas[0].accepted) and (not machine.dfas[1].accepted):
-            return "A"
+            return "T"
         else:
             return "O"
-
 
     dfa_alarm = DFA(table_alarm, [12] + list(range(14, 21)), 1)
     dfa_no_alarm = DFA(table_no_alarm, [7, 8, 9], 1)
     machine = Moore(machine_output, [dfa_alarm, dfa_no_alarm])
+    
+    inp_string = "0010011011000111011110100"
+    
+    inputs = []
+    states_1 = [str(machine.state[0])]
+    states_2 = [str(machine.state[1])]
+    outputs = [machine.output]
+    
+    for char in inp_string:
+        machine.go(char)
+        inputs.append("{:>3s}".format(char))
+        states_1.append("{:>3s}".format(str(machine.state[0])))
+        states_2.append("{:>3s}".format(str(machine.state[1])))
+        outputs.append("{:>3s}".format(machine.output))
+
+    print(" " + "".join(inputs))
+    print("".join(states_1))
+    print("".join(states_2))
+    print("".join(outputs))

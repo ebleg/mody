@@ -213,12 +213,12 @@ if __name__ == "__main__":  # Do not perform derivation when imported
     T_func = lambdify(fun_args2, T, modules="scipy")
     V_func = lambdify(fun_args2, V, modules="scipy")
 
-    A_func = lambdify(fun_args2, A.pos_from(origin).to_matrix(N).simplify()[:2],
-                      modules="scipy")
-    B_func = lambdify(fun_args2, B.pos_from(origin).to_matrix(N).simplify()[:2],
-                      modules="scipy")
-    C_func = lambdify(fun_args2, C.pos_from(origin).to_matrix(N).simplify()[:2],
-                      modules="scipy")
+    # A_func = lambdify(fun_args2, A.pos_from(origin).to_matrix(N).simplify()[:2],
+    #                   modules="scipy")
+    # B_func = lambdify(fun_args2, B.pos_from(origin).to_matrix(N).simplify()[:2],
+    #                   modules="scipy")
+    # C_func = lambdify(fun_args2, C.pos_from(origin).to_matrix(N).simplify()[:2],
+    #                   modules="scipy")
 
     def f(*args):
         return np.array(solve(M_func(*args),
@@ -226,12 +226,12 @@ if __name__ == "__main__":  # Do not perform derivation when imported
 
     dill.settings['recurse'] = True
     dill.dump(f, open("f_dyn", "wb"))
-    dill.dump(T_func, open("T_func", "wb"))
-    dill.dump(V_func, open("V_func", "wb"))
-    dill.dump(A_func, open("A_func", "wb"))
-    dill.dump(B_func, open("B_func", "wb"))
-    dill.dump(C_func, open("C_func", "wb"))
+    dill.dump(T_func, open("func/T_func", "wb"))
+    dill.dump(V_func, open("func/V_func", "wb"))
+    # dill.dump(A_func, open("func/A_func", "wb"))
+    # dill.dump(B_func, open("func/B_func", "wb"))
+    # dill.dump(C_func, open("func/C_func", "wb"))
 
-    print(vlatex(T))
+    # print(vlatex(T))
 
 # approx = SeriesApprox({q[0]: (-np.pi/2, np.pi/2), q[1]: (-np.pi/2, np.pi/2), q[2]: (-np.pi/2, np.pi/2), dq[0]: (-15, 15), dq[1]: (-15, 15), dq[2]: (-15, 15) }, reltol=1e-3)
