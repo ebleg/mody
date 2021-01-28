@@ -12,12 +12,12 @@ plt.rc("xtick.minor", visible=True)
 plt.rc("ytick.minor", visible=True)
 plt.rc("axes", grid=True)
 plt.rc("axes", xmargin=0)
-plt.rc("text", usetex=True)
+# plt.rc("text", usetex=True)
 plt.rc('axes', axisbelow=True)
 
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#2ecc71", "#3498db",
-                                             "#e74c3c", "#f1c40f", "#e67e22", 
-                                             "#9b59b6"]) 
+                                                    "#e74c3c", "#f1c40f",
+                                                    "#e67e22", "#9b59b6"])
 
 if __name__ == "__main__":
     t = np.linspace(0, 10, 200)

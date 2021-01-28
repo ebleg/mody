@@ -213,12 +213,12 @@ if __name__ == "__main__":  # Do not perform derivation when imported
     T_func = lambdify(fun_args2, T, modules="scipy")
     V_func = lambdify(fun_args2, V, modules="scipy")
 
-    # A_func = lambdify(fun_args2, A.pos_from(origin).to_matrix(N).simplify()[:2],
-    #                   modules="scipy")
-    # B_func = lambdify(fun_args2, B.pos_from(origin).to_matrix(N).simplify()[:2],
-    #                   modules="scipy")
-    # C_func = lambdify(fun_args2, C.pos_from(origin).to_matrix(N).simplify()[:2],
-    #                   modules="scipy")
+    A_func = lambdify(fun_args2, A.pos_from(origin).to_matrix(N).simplify()[:2],
+                      modules="scipy")
+    B_func = lambdify(fun_args2, B.pos_from(origin).to_matrix(N).simplify()[:2],
+                      modules="scipy")
+    C_func = lambdify(fun_args2, C.pos_from(origin).to_matrix(N).simplify()[:2],
+                      modules="scipy")
 
     def f(*args):
         return np.array(solve(M_func(*args),
@@ -228,9 +228,9 @@ if __name__ == "__main__":  # Do not perform derivation when imported
     dill.dump(f, open("f_dyn", "wb"))
     dill.dump(T_func, open("func/T_func", "wb"))
     dill.dump(V_func, open("func/V_func", "wb"))
-    # dill.dump(A_func, open("func/A_func", "wb"))
-    # dill.dump(B_func, open("func/B_func", "wb"))
-    # dill.dump(C_func, open("func/C_func", "wb"))
+    dill.dump(A_func, open("func/A_func", "wb"))
+    dill.dump(B_func, open("func/B_func", "wb"))
+    dill.dump(C_func, open("func/C_func", "wb"))
 
     # print(vlatex(T))
 

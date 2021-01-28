@@ -19,12 +19,13 @@ def csv_to_transition_table(fname):
 
 
 class DFA(object):
-    def __init__(self, transition_table, acceptance_states, initial):
+    def __init__(self, transition_table, acceptance_states, initial, 
+                 bufsize=1e3):
         # transition_table = nested dict with for each state the input and the
         # next state
         self.order = len(transition_table)
         self.table = transition_table
-        self.past_states = [initial]
+        self.past_states = np.empty[initial]
         self.past_inputs = []
         self.acceptance_states = acceptance_states
 
@@ -97,14 +98,14 @@ if __name__ == "__main__":
     dfa_alarm = DFA(table_alarm, [12] + list(range(14, 21)), 1)
     dfa_no_alarm = DFA(table_no_alarm, [7, 8, 9], 1)
     machine = Moore(machine_output, [dfa_alarm, dfa_no_alarm])
-    
+
     inp_string = "0010011011000111011110100"
-    
+
     inputs = []
     states_1 = [str(machine.state[0])]
     states_2 = [str(machine.state[1])]
     outputs = [machine.output]
-    
+
     for char in inp_string:
         machine.go(char)
         inputs.append("{:>3s}".format(char))
