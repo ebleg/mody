@@ -24,3 +24,5 @@ L_A = 0.1  # Armature inductance
 Kt = 1.  # Back EMF constant
 
 wheel_radius = 0.1
+ball_radius = 0.1
+ground_height = 0.25

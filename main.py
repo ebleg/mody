@@ -172,7 +172,7 @@ def animate_system(t, states, filename=None):
 
     fig = plt.figure()
     cart_width = 0.4
-    cart_height = 0.2
+    cart_height = 0.4
 
     ax = plt.axes(xlim=(-1.2, np.max(states[1, :]) + 1.2),
                   ylim=(-0.5, 2))
