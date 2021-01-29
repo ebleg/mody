@@ -60,29 +60,13 @@ print(f"Time elapsed {timeit.default_timer() - t0}")
 t_ver = sol.t
 y_ver = sol.y
 
-# fig, ax = plt.subplots(4, 1, sharex=True)
-# fig.set_size_inches((fig.get_size_inches()[0], fig.get_size_inches()[1]*1.1))
-# ax[0].plot(t_ver, y_ver[0, :])
-# ax[0].set_title("Motor current")
-# ax[0].set_ylabel("$i$ (A)")
-# ax[1].plot(t_ver, y_ver[1, :])
-# ax[1].set_ylabel("$q_1$ (m)")
-# ax[1].set_title("Cart position")
-# ax[2].plot(t_ver, np.rad2deg(y_ver[2, :]))
-# ax[2].set_title("Pendulum angle")
-# ax[2].set_ylabel("$q_2$ ($^\circ$)")
-# ax[3].plot(t_ver, np.rad2deg(y_ver[3, :]))
-# ax[3].set_title("Link angle")
-# ax[3].set_ylabel("$q_2$ ($^\circ$)")
-# ax[3].set_xlabel("Time (s)")
-# fig.tight_layout(pad=0.3)
-# fig.show()
-# fig.savefig("media/verification.eps")
+fig, _ = plot.plot_states(y_ver, (0, 1, 2, 3), t_ver)
+fig.savefig("media/verification.eps")
+
 
 # ----------------------------------------------------------------------------
 #                             Plot time simulation
 # ----------------------------------------------------------------------------
-
 
 def U(t):
     if t < 2:
@@ -110,33 +94,13 @@ print(f"Time elapsed {timeit.default_timer() - t0}")
 t_sim = sol.t
 y_sim = sol.y
 
-# fig, ax = plt.subplots(5, 1, sharex=True)
-# fig.set_size_inches((fig.get_size_inches()[0], fig.get_size_inches()[1]*1.3))
-# ax[0].plot(t_sim, y_sim[0, :])
-# ax[0].set_title("Motor current")
-# ax[0].set_ylabel("$i$ (A)")
-# ax[1].plot(t_sim, y_sim[1, :])
-# ax[1].set_ylabel("$q_1$ (m)")
-# ax[1].set_title("Cart position")
-# ax[2].plot(t_sim, y_sim[4, :])
-# ax[2].set_ylabel("$\dot{q}_1$ (m)")
-# ax[2].set_title("Cart speed")
-# ax[3].plot(t_sim, np.rad2deg(y_sim[2, :]))
-# ax[3].set_title("Pendulum angle")
-# ax[3].set_ylabel("$q_2$ ($^\circ$)")
-# ax[4].plot(t_sim, np.rad2deg(y_sim[3, :]))
-# ax[4].set_title("Link angle")
-# ax[4].set_ylabel("$q_2$ ($^\circ$)")
-# ax[4].set_xlabel("Time (s)")
-# fig.tight_layout(pad=0.3)
-# fig.show()
-# fig.savefig("media/time_simulation.eps")
+fig, _ = plot.plot_states(y_sim, (0, 1, 4, 2, 3), t_sim)
+fig.savefig("media/time_simulation.eps")
 
 
 # ----------------------------------------------------------------------------
 #                                 Plot energies
 # ----------------------------------------------------------------------------
-
 
 fig, ax = plt.subplots(1, 2)
 plot.plot_energy(y_ver, t_ver, lambda t: 0, lambda t: 0, V, T, ax[0])

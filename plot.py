@@ -3,7 +3,7 @@ from scipy.integrate import cumtrapz
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from matplotlib import rc, animation
+from matplotlib import animation
 
 import parameters as par
 
@@ -22,6 +22,28 @@ plt.rc('axes', axisbelow=True)
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#2ecc71", "#3498db",
                                                     "#e74c3c", "#f1c40f",
                                                     "#e67e22", "#9b59b6"])
+
+
+def plot_states(states, which_states, t):
+    titles = ("Motor current", "Cart position", "Pendulum angle",
+              "Link angle", "Cart speed", "Pendulum angular velocity",
+              "Link angular velocity")
+    ylabels = ("$i$ (A)", "$q_1$ (m)", "$q_2$ ($^\\circ$)",
+               "$q_3$ ($^\\circ$)", "$\\dot{q}_1$ (m/s)",
+               "$\\dot{q}_2$ ($^\\circ/s$)", "$\\dot{q}_3$ ($^\\circ/s$)")
+
+    fig, ax = plt.subplots(len(which_states), 1, sharex=True)
+    fig.set_size_inches((fig.get_size_inches()[0],
+                        fig.get_size_inches()[1]*(1+.1*len(which_states))))
+    for i in which_states:
+        ax[i].plot(t, states[i, :])
+        ax[i].set_title(titles[i])
+        ax[i].set_ylabel(ylabels[i])
+
+    fig.tight_layout(pad=0.3)
+    fig.show()
+
+    return fig, ax
 
 
 def plot_energy(states, t, U, F_brake, V, T, ax=None):
