@@ -35,7 +35,7 @@ def check_collision(qdq, pos_funs):
         balls_collision = None
 
     # -- Collisions with ground
-    heights = np.array((ball_pos(qdq) for ball_pos in pos_funs))
+    heights = np.abs(np.array((ball_pos(qdq)[1] for ball_pos in pos_funs)))
     min_height_loc = np.argmin(heights)
 
     if heights[min_height_loc] < par.ball_radius:
