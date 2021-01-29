@@ -1,5 +1,5 @@
 import re
-from numpy import genfromtxt
+import numpy as np
 
 
 # Best regexp (alarm): (0|1)*111((0111(0|1)?)|(00111)|111(0|1)?(0|1)?)$
@@ -7,7 +7,7 @@ from numpy import genfromtxt
 
 
 def csv_to_transition_table(fname):
-    raw = genfromtxt(fname, delimiter=",", dtype=int)
+    raw = np.genfromtxt(fname, delimiter=",", dtype=int)
     states = raw[1:, 0]
     inputs = raw[0, 1:]
 
@@ -19,19 +19,21 @@ def csv_to_transition_table(fname):
 
 
 class DFA(object):
-    def __init__(self, transition_table, acceptance_states, initial, 
-                 bufsize=1e3):
+    def __init__(self, transition_table, acceptance_states, initial,
+                 bufsize=1000):
         # transition_table = nested dict with for each state the input and the
         # next state
         self.order = len(transition_table)
         self.table = transition_table
-        self.past_states = np.empty[initial]
-        self.past_inputs = []
+        self.past_states = np.empty(bufsize, dtype="int")
+        self.past_states[0] = initial
+        self.state_count = 0
+        self.past_inputs = np.empty(bufsize, dtype="int")
         self.acceptance_states = acceptance_states
 
     @property
     def state(self):
-        return self.past_states[-1]
+        return self.past_states[self.state_count]
 
     @property
     def options(self):  # Dict with inputs for the current state
@@ -40,11 +42,12 @@ class DFA(object):
     def go(self, inputs):  # Transition to new state given (list of) input(s)
         try:  # Assume it's a list
             for inp in inputs:
-                self.past_states.append(self.options[int(inp)])
-                self.past_inputs.append(int(inp))
+                self.past_states[self.state_count+1] = self.options[int(inp)]
+                self.past_inputs[self.state_count] = int(inp)
         except TypeError:  # Single input
-            self.past_states.append(self.options[inputs])
-            self.past_inputs.append(inputs)
+            self.past_states[self.state_count+1] = self.options[inputs]
+            self.past_inputs[self.state_count] = inputs
+        self.state_count += 1
 
         return self.state
 
@@ -52,10 +55,11 @@ class DFA(object):
     def accepted(self):
         return self.state in self.acceptance_states
 
+
 # Merges multiple DFA objects together
 class Moore(object):
     def __init__(self, output_map, dfas):
-        # Expects an output map and a list of DFA's  
+        # Expects an output map and a list of DFA's
         self.dfas = dfas
         self.output_map = output_map
 
@@ -68,12 +72,14 @@ class Moore(object):
         return self.output_map(self)
 
     def go(self, inputs):
-        for dfa in self.dfas: dfa.go(inputs)
+        for dfa in self.dfas:
+            dfa.go(inputs)
         return self.output
 
     @property
     def past_states(self):
         return list(zip(*[dfa.past_states for dfa in self.dfas]))
+
 
 if __name__ == "__main__":
     # Generate all possible 8-bit sequences
