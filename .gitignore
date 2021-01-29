@@ -2,4 +2,3 @@ __pycache__/*
 .vscode/*
 *.pyc
 __pycache__/parameters.cpython-38.pyc
-media/*
