@@ -1,5 +1,5 @@
 # Mechanical parameters
-m_links = [0.5, 0.5]
+m_links = [0.5, 0.375]
 m_point = [5., 2, 2, 2]
 
 d_links = [1., 0.75]

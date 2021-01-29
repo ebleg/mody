@@ -1,7 +1,11 @@
 import numpy as np
+from scipy.integrate import cumtrapz
+from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import matplotlib as mpl
-from matplotlib import rc
+from matplotlib import rc, animation
+
+import parameters as par
 
 plt.style.use("seaborn-bright")
 plt.rc("font", family="serif")
@@ -18,6 +22,91 @@ plt.rc('axes', axisbelow=True)
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#2ecc71", "#3498db",
                                                     "#e74c3c", "#f1c40f",
                                                     "#e67e22", "#9b59b6"])
+
+
+def plot_energy(states, t, U, F_brake, V, T, ax=None):
+    V_rn = V(states[1:, :])
+    V_rn -= np.min(V_rn)
+    T_rn = T(states[1:, :])
+    # T_cart = 0.5*par.m_point[0]*states[4,:]**2
+    # T_rest = T_rn - T_cart
+    E_total = cumtrapz(np.vectorize(U)(t)*states[0, :], t, initial=0)
+    E_total += V_rn[0]
+    E_in_brake = cumtrapz(np.vectorize(F_brake)(t)
+                          * states[4, :]/par.wheel_radius,
+                          states[1, :], initial=0)
+    E_inductor = cumtrapz(par.L_A*states[0, :], states[0, :], initial=0)
+    losses_electric = cumtrapz(states[0, :]**2*par.R_A,
+                               t, initial=0)
+    losses_mechanical = (E_total - losses_electric - V_rn
+                         - T_rn - E_in_brake - E_inductor)
+
+    if ax is None:
+        fig, ax = plt.subplots()
+
+    ax.stackplot(t, V_rn, T_rn, E_in_brake,
+                 losses_mechanical, losses_electric, E_inductor,
+                 labels=("Potential energy", "Kinetic energy", "Brake energy",
+                         "Mechanical losses", "Electric losses",
+                         "Energy in inductor"))
+    ax.plot(t, E_total, color="black")
+    ax.set_ylabel("Energy (J)")
+    ax.set_xlabel("Time (s)")
+
+
+def animate_system(t, states, A_pos, B_pos, C_pos, filename=None):
+    # Adapted from https://www.moorepants.info/blog/npendulum.html
+
+    fig = plt.figure()
+    cart_width = 0.4
+    cart_height = 0.4
+
+    ax = plt.axes(xlim=(-1.2, np.max(states[1, :]) + 1.2),
+                  ylim=(-0.5, 2))
+    ax.axis("equal")
+    ax.set_xlim((-1.2, np.max(states[1, :]) + 1.2))
+    ax.set_ylim((-0.5, 2))
+    time_text = ax.text(0.04, 0.9, '', transform=ax.transAxes)
+
+    # Draw the cart
+    rect = Rectangle([states[0, 0] - cart_width/2., -cart_height/2.],
+                     cart_width, cart_height, fill=True, color='red',
+                     ec='black')
+    ax.add_patch(rect)
+
+    ax.invert_yaxis()
+
+    # Empty line for pendulum
+    line, = ax.plot([], [], lw=2, marker="o", markersize=6, color="black")
+    spring, = ax.plot([], [], lw=2, color="grey")
+
+    def init():
+        time_text.set_text("")
+        rect.set_xy((0, 0))
+        line.set_data([], [])
+        return time_text, rect, line
+
+    def animate(i):
+        time_text.set_text('time = {:2.2f}'.format(t[i]))
+        rect.set_xy((states[1, i] - cart_width/2., -cart_height/2))
+        A = A_pos(states[1:, i])
+        B = B_pos(states[1:, i])
+        C = C_pos(states[1:, i])
+
+        x_data = (states[1, i], A[0], C[0], B[0], states[1, i])
+        y_data = (0, A[1], C[1], B[1], 0)
+        line.set_data(x_data, y_data)
+        spring.set_data((A[0], B[0]), (A[1], B[1]))
+        return time_text, rect, line,
+
+    anim = animation.FuncAnimation(fig, animate, frames=len(t), init_func=init,
+                                   interval=t[-1] / len(t) * 1000, blit=True,
+                                   repeat=False)
+
+    # save the animation if a filename is given
+    if filename is not None:
+        anim.save(filename, fps=30, codec='libx264')
+
 
 if __name__ == "__main__":
     t = np.linspace(0, 10, 200)
