@@ -47,19 +47,18 @@ def check_collision(qdq, pos_funs):
     return balls_collision, ground_collision
 
 
-def emulate_sensor(y_in):
+def emulate_sensor(y_in, threshold):
+
     # Expect a Boolean array
     finished = False
     p = 0.2
     i = 0
-    y_out = y_in.copy()
+    y_out = np.abs(y_in) < threshold
 
     while not finished:
         i += geom.rvs(p) + 7
         if i < len(y_in):
-            print(y_out[i], end=" ")
             y_out[i] = ~y_out[i]
-            print(y_out[i])
         else:
             finished = True
 
@@ -67,5 +66,7 @@ def emulate_sensor(y_in):
 
 
 if __name__ == "__main__":
-    test = np.random.choice(a=[True, False], size=20)
-    test_faults = emulate_sensor(test)
+    test = np.random.random(size=20)*10
+    test_faults = emulate_sensor(test, 7)
+    for i in range(len(test)):
+        print(f"{test[i]}  {test_faults[i]}")
