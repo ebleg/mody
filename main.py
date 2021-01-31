@@ -1,8 +1,7 @@
 import dill
 
 import numpy as np
-from scipy.integrate import solve_ivp, cumtrapz
-from scipy.special import erf
+from scipy.integrate import solve_ivp
 
 import matplotlib.pyplot as plt
 from matplotlib.patches import Rectangle
@@ -11,9 +10,10 @@ import timeit
 
 import parameters as par
 import plot
+from hybrid import simulate_hybrid
+
 
 # from lagrange import sym_pars
-
 f_nopars = dill.load(open("func/f_dyn", "rb"))
 V_nopars = dill.load(open("func/V_func", "rb"))
 T_nopars = dill.load(open("func/T_func", "rb"))
@@ -41,7 +41,7 @@ def f_full(t, x, U, F_brake):
     dx[0] = 1/par.L_A*(-par.R_A*x[0] - par.Kt*x[4]/par.wheel_radius + U(t))
     # Cart dynamics
     dx[1:] = f_multi_body(par.Kt*x[0]/par.wheel_radius
-                          - F_brake(t)*x[4]/par.wheel_radius, x[1:])
+                          - F_brake(t)*x[4], x[1:])
     return dx
 
 
@@ -49,19 +49,19 @@ def f_full(t, x, U, F_brake):
 #                                 Verification
 # ----------------------------------------------------------------------------
 
-t_max = 10
-t = np.linspace(0, t_max, 300)
-x0 = np.array([0, 0, np.deg2rad(25), np.pi/6, 0, 0, 0])
-t0 = timeit.default_timer()
-sol = solve_ivp(lambda t, x: f_full(t, x, lambda t: 0, lambda t: 0), 
-                (0, t_max), x0, method="RK45", t_eval=t)
-print(f"Time elapsed {timeit.default_timer() - t0}")
+# t_max = 10
+# t = np.linspace(0, t_max, 300)
+# x0 = np.array([0, 0, np.deg2rad(25), np.pi/6, 0, 0, 0])
+# t0 = timeit.default_timer()
+# sol = solve_ivp(lambda t, x: f_full(t, x, lambda t: 0, lambda t: 0), 
+#                 (0, t_max), x0, method="RK45", t_eval=t)
+# print(f"Time elapsed {timeit.default_timer() - t0}")
+# 
+# t_ver = sol.t
+# y_ver = sol.y
 
-t_ver = sol.t
-y_ver = sol.y
-
-fig, _ = plot.plot_states(y_ver, (0, 1, 2, 3), t_ver)
-fig.savefig("media/verification.eps")
+# fig, _ = plot.plot_states(y_ver, (0, 1, 2, 3), t_ver)
+# fig.savefig("media/verification.eps")
 
 
 # ----------------------------------------------------------------------------
@@ -80,44 +80,66 @@ def F_brake(t):
     if t < 2:
         return 0
     else:
-        return 1
+        return 10
 
 
-t_max = 10
-t = np.linspace(0, t_max, 600)
-x0 = np.array([0, 0, 0, np.pi/6, 0, 0, 0])
-t0 = timeit.default_timer()
-sol = solve_ivp(lambda t, x: f_full(t, x, U, F_brake), (0, t_max),
-                x0, method="RK45", t_eval=t)
-print(f"Time elapsed {timeit.default_timer() - t0}")
+# t_max = 10
+# t = np.linspace(0, t_max, 600)
+# x0 = np.array([0, 0, 0, np.pi/6, 0, 0, 0])
+# t0 = timeit.default_timer()
+# sol = solve_ivp(lambda t, x: f_full(t, x, U, F_brake), (0, t_max),
+#                 x0, method="RK45", t_eval=t)
+# print(f"Time elapsed {timeit.default_timer() - t0}")
+# 
+# t_sim = sol.t
+# y_sim = sol.y
 
-t_sim = sol.t
-y_sim = sol.y
-
-fig, _ = plot.plot_states(y_sim, (0, 1, 4, 2, 3), t_sim)
-fig.savefig("media/time_simulation.eps")
+# fig, _ = plot.plot_states(y_sim, (0, 1, 4, 2, 3), t_sim)
+# fig.savefig("media/time_simulation.eps")
 
 
 # ----------------------------------------------------------------------------
 #                                 Plot energies
 # ----------------------------------------------------------------------------
 
-fig, ax = plt.subplots(1, 2)
-plot.plot_energy(y_ver, t_ver, lambda t: 0, lambda t: 0, V, T, ax[0])
-plot.plot_energy(y_sim, t_sim, U, F_brake, V, T, ax[1])
-ax[1].set_ylabel(None)
-ax[0].set_title("Verification case", fontsize="medium")
-ax[1].set_title("Simulation with inputs", fontsize="medium")
-fig.legend(("Total energy", "Potential energy", "Kinetic energy",
-            "Brake energy", "Mechanical losses", "Electrial losses",
-            "Inductor"), ncol=3, loc="lower center", fontsize="small")
-fig.suptitle("Energy losses")
-fig.tight_layout(pad=0.3)
-fig.subplots_adjust(bottom=0.22, top=0.9)
-fig.show()
-fig.savefig("media/energy.eps")
+# fig, ax = plt.subplots(1, 2)
+# plot.plot_energy(y_ver, t_ver, lambda t: 0, lambda t: 0, V, T, ax[0])
+# plot.plot_energy(y_sim, t_sim, U, F_brake, V, T, ax[1])
+# ax[1].set_ylabel(None)
+# ax[0].set_title("Verification case", fontsize="medium")
+# ax[1].set_title("Simulation with inputs", fontsize="medium")
+# fig.legend(("Total energy", "Potential energy", "Kinetic energy",
+#             "Brake energy", "Mechanical losses", "Electrial losses",
+#             "Inductor"), ncol=3, loc="lower center", fontsize="small")
+# fig.suptitle("Energy losses")
+# fig.tight_layout(pad=0.3)
+# fig.subplots_adjust(bottom=0.22, top=0.9)
+# fig.show()
+# fig.savefig("media/energy.eps")
+# 
+# plot.animate_system(t_sim, y_sim, A_pos, B_pos, C_pos,
+#                     filename="media/simulation.gif")
+# plot.animate_system(t_ver, y_ver, A_pos, B_pos, C_pos,
+#                     filename="media/verification.gif")
 
-plot.animate_system(t_sim, y_sim, A_pos, B_pos, C_pos,
-                    filename="media/simulation.gif")
-plot.animate_system(t_ver, y_ver, A_pos, B_pos, C_pos,
-                    filename="media/verification.gif")
+
+# ----------------------------------------------------------------------------
+#                               Hybrid simulation
+# ----------------------------------------------------------------------------
+
+x0 = np.array([0, 0, 0, np.pi/6, 0, 3, 0])
+t = np.linspace(0, 5, 100)
+
+
+def F_brake2(t):
+    if t > 1:
+        return 10
+    else:
+        return 0
+
+y = simulate_hybrid(f_full, lambda t: 0, lambda t: 0, x0, t,
+                    (A_pos, B_pos, C_pos))
+
+fig, _ = plot.plot_states(y, (1, 2, 3), t)
+plot.animate_system(t, y, A_pos, B_pos, C_pos,
+                    filename="media/hybrid.gif")

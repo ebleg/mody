@@ -23,6 +23,12 @@ R_A = 0.2  # Armature resistance
 L_A = 0.1  # Armature inductance
 Kt = 1.  # Back EMF constant
 
+# Misc
 wheel_radius = 0.1
-ball_radius = 0.1
+ball_radius = 0.05
 ground_height = 0.25
+
+# Hybrid simulation
+restitution_coeff = 0.85
+baud = 100  # Symbol rate of sensor
+sensor_threshold = 10  # Angular velocity alarm threshold

@@ -35,10 +35,12 @@ def plot_states(states, which_states, t):
     fig, ax = plt.subplots(len(which_states), 1, sharex=True)
     fig.set_size_inches((fig.get_size_inches()[0],
                         fig.get_size_inches()[1]*(1+.1*len(which_states))))
+    k = 0
     for i in which_states:
-        ax[i].plot(t, states[i, :])
-        ax[i].set_title(titles[i])
-        ax[i].set_ylabel(ylabels[i])
+        ax[k].plot(t, states[i, :])
+        ax[k].set_title(titles[i])
+        ax[k].set_ylabel(ylabels[i])
+        k += 1
 
     fig.tight_layout(pad=0.3)
     fig.show()
@@ -55,8 +57,7 @@ def plot_energy(states, t, U, F_brake, V, T, ax=None):
     E_total = cumtrapz(np.vectorize(U)(t)*states[0, :], t, initial=0)
     E_total += V_rn[0]
     E_in_brake = cumtrapz(np.vectorize(F_brake)(t)
-                          * states[4, :]/par.wheel_radius,
-                          states[1, :], initial=0)
+                          * states[4, :], states[1, :], initial=0)
     E_inductor = cumtrapz(par.L_A*states[0, :], states[0, :], initial=0)
     losses_electric = cumtrapz(states[0, :]**2*par.R_A,
                                t, initial=0)
