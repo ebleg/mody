@@ -80,19 +80,18 @@ def plot_energy(states, t, input_voltage, brake_force, V, T, ax=None):
     ax.set_xlabel("Time (s)")
 
 
-def animate_system(t, states, A_pos, B_pos, C_pos, filename=None):
+def animate_system(t, states, A_pos, B_pos, C_pos, filename=None, move_along=False):
     # Adapted from https://www.moorepants.info/blog/npendulum.html
 
     fig = plt.figure()
     cart_width = 0.2
     cart_height = 0.2
 
-    ax = plt.axes(xlim=(-1.2, np.max(states[1, :]) + 1.2),
-                  ylim=(-0.5, 2))
+    ax = plt.axes()
     ax.plot([-50, 50], [par.ground_height, par.ground_height], color="black")
-    ax.axis("equal")
-    ax.set_xlim((-1.2, np.max(states[1, :]) + 1.2))
-    ax.set_ylim((-0.5, 2))
+    # ax.axis("equal")
+    # ax.set_xlim((-1.2, np.max(states[1, :]) + 1.2))
+    # ax.set_ylim((-0.5, 1.5))
     time_text = ax.text(0.04, 0.9, '', transform=ax.transAxes)
 
     # Draw the cart
@@ -125,6 +124,10 @@ def animate_system(t, states, A_pos, B_pos, C_pos, filename=None):
         y_data = (0, A[1], C[1], B[1], 0)
         line.set_data(x_data, y_data)
         spring.set_data((A[0], B[0]), (A[1], B[1]))
+        ax.ignore_existing_data_limits = True
+        ax.update_datalim(((states[1, i] - 1.2, -1.5), (states[1, i] + 1.2, 1.5)))
+        ax.autoscale_view()
+
         return time_text, rect, line,
 
     anim = animation.FuncAnimation(fig, animate, frames=len(t), init_func=init,

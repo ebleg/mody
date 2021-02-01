@@ -85,16 +85,16 @@ def brake_force(t):
         return 50.
 
 
-# t_max = 5
-# t = np.linspace(0, t_max, 600)
-# x0 = np.array([0, 0, 0, np.pi/6, 0, 0, 0])
-# t0 = timeit.default_timer()
-# sol = solve_ivp(lambda t, x: f_full(t, x, input_voltage, brake_force),
-#                 (0, t_max), x0, method="BDF", t_eval=t)
-# print(f"Time elapsed {timeit.default_timer() - t0}")
-#
-# t_sim = sol.t
-# y_sim = sol.y
+t_max = 5
+t = np.linspace(0, t_max, 600)
+x0 = np.array([0, 0, 0, np.pi/6, 0, 0, 0])
+t0 = timeit.default_timer()
+sol = solve_ivp(lambda t, x: f_full(t, x, input_voltage, brake_force),
+                (0, t_max), x0, method="BDF", t_eval=t)
+print(f"Time elapsed {timeit.default_timer() - t0}")
+
+t_sim = sol.t
+y_sim = sol.y
 #
 # fig, _ = plot.plot_states(y_sim, (0, 1, 4, 2, 3), t_sim)
 # fig.show()
@@ -120,34 +120,32 @@ def brake_force(t):
 # fig.show()
 # fig.savefig("media/energy.eps")
 
-#plot.animate_system(t_sim, y_sim, A_pos, B_pos, C_pos,
-#                    filename="media/simulation.gif")
-#plot.animate_system(t_ver, y_ver, A_pos, B_pos, C_pos,
-#                    filename="media/verification.gif")
+plot.animate_system(t_sim, y_sim, A_pos, B_pos, C_pos,
+                    filename="media/simulation.gif")
+
+# plot.animate_system(t_ver, y_ver, A_pos, B_pos, C_pos,
+#                     filename="media/verification.gif")
 
 
 # ----------------------------------------------------------------------------
 #                               Hybrid simulation
 # ----------------------------------------------------------------------------
 
-x0 = np.array([0, 0, 0, np.pi/6, 0, 3, 0])
-t = np.linspace(0, 5, 100)
-
-
-def F_brake2(t):
-    if t > 1:
-        return 10
-    else:
-        return 0
-
-t = np.linspace(0, 2, 300)
-# x0 = np.array([0, 0, 0, np.pi/6, 5, 0, 0])
-# hybrid_sim = HybridSimulation(f_full, lambda t: 0, lambda t: 100, x0, t,
+# t = np.linspace(0, 3, 300)
+# x0 = np.array([0, 0, 0, 1.6*np.pi/6, 0, 0, -1])
+# hybrid_sim = HybridSimulation(f_full, lambda t: 0, lambda t: 0, x0, t,
 #                               (A_pos, B_pos, C_pos))
-x0 = np.array([0, 0, 0, 1.6*np.pi/6, 0, 0, -1])
-hybrid_sim = HybridSimulation(f_full, lambda t: 0, lambda t: 0, x0, t,
-                              (A_pos, B_pos, C_pos))
-hybrid_sim.simulate()
+# hybrid_sim.simulate()
 
-plot.animate_system(t, hybrid_sim.output, A_pos, B_pos, C_pos,
-                    filename="media/hybrid.gif")
+# plot.animate_system(t, hybrid_sim.output, A_pos, B_pos, C_pos, filename="media/hybrid_1.gif")
+
+def voltage_sine(t):
+    return 120*np.sin(2*np.pi*t)
+
+# t = np.linspace(0, 5, 300)
+# x0 = np.array([0, 0, 0, np.pi/6, 0, 0, 0])
+# hybrid_sim = HybridSimulation(f_full, voltage_sine, lambda t: 100, x0, t,
+#                               (A_pos, B_pos, C_pos))
+# hybrid_sim.simulate()
+# plot.animate_system(t, hybrid_sim.output, A_pos, B_pos, C_pos, filename="media/hybrid_2.gif")
+

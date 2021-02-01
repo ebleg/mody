@@ -31,4 +31,4 @@ ground_height = 0.15
 # Hybrid simulation
 restitution_coeff = 0.85
 baud = 100  # Symbol rate of sensor
-sensor_threshold = 10  # Angular velocity alarm threshold
+sensor_threshold = 6  # Angular velocity alarm threshold

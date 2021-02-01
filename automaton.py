@@ -45,10 +45,11 @@ class DFA(object):
             for inp in inputs:
                 self._past_states[self.state_count+1] = self.options[int(inp)]
                 self.past_inputs[self.state_count] = int(inp)
+                self.state_count += 1
         except TypeError:  # Single input
             self._past_states[self.state_count+1] = self.options[inputs]
             self.past_inputs[self.state_count] = inputs
-        self.state_count += 1
+            self.state_count += 1
 
         return self.state
 
