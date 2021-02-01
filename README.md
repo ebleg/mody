@@ -8,3 +8,13 @@
 <p align="center">
   <img src="media/simulation.gif" alt="animated" />
 </p>
+
+## Hybrid: collision between balls
+<p align="center">
+  <img src="media/hybrid_1.gif" alt="animated" />
+</p>
+
+## Hybrid: with voltage interruption
+<p align="center">
+  <img src="media/hybrid_2.gif" alt="animated" />
+</p>

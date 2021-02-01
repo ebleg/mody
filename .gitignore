@@ -1,7 +1,6 @@
 __pycache__/*
 .vscode/*
 *.pyc
-.idea/misc.xml
-*.xml
-*.iml
+__pycache__/parameters.cpython-38.pyc
+.idea/*
 
