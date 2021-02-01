@@ -57,7 +57,8 @@ def plot_energy(states, t, input_voltage, brake_force, V, T, ax=None):
     T_rn = T(states[1:, :])
     # T_cart = 0.5*par.m_point[0]*states[4,:]**2
     # T_rest = T_rn - T_cart
-    E_total = cumtrapz(np.vectorize(input_voltage)(t)*states[0, :], t, initial=0)
+    E_total = cumtrapz(np.vectorize(input_voltage)(t)*states[0, :], t,
+                       initial=0)
     E_total += V_rn[0]
     E_in_brake = cumtrapz(np.vectorize(brake_force)(t)
                           *erf(3*states[4, :]), states[1, :], initial=0)
@@ -80,7 +81,8 @@ def plot_energy(states, t, input_voltage, brake_force, V, T, ax=None):
     ax.set_xlabel("Time (s)")
 
 
-def animate_system(t, states, A_pos, B_pos, C_pos, filename=None, move_along=False):
+def animate_system(t, states, input_voltage, brake_force, A_pos,
+                   B_pos, C_pos, filename=None):
     # Adapted from https://www.moorepants.info/blog/npendulum.html
 
     fig = plt.figure()
@@ -93,6 +95,8 @@ def animate_system(t, states, A_pos, B_pos, C_pos, filename=None, move_along=Fal
     # ax.set_xlim((-1.2, np.max(states[1, :]) + 1.2))
     # ax.set_ylim((-0.5, 1.5))
     time_text = ax.text(0.04, 0.9, '', transform=ax.transAxes)
+    voltage_text = ax.text(0.04, 0.85, '', transform=ax.transAxes)
+    brake_text = ax.text(0.04, 0.80, '', transform=ax.transAxes)
 
     # Draw the cart
     rect = Rectangle((states[0, 0] - cart_width/2., -cart_height/2.),
@@ -109,12 +113,17 @@ def animate_system(t, states, A_pos, B_pos, C_pos, filename=None, move_along=Fal
 
     def init():
         time_text.set_text("")
+        brake_text.set_text("")
+        voltage_text.set_text("")
         rect.set_xy((0, 0))
         line.set_data([], [])
         return time_text, rect, line
 
     def animate(i):
-        time_text.set_text('time = {:2.2f}'.format(t[i]))
+        time_text.set_text('Time = {:2.2f} s'.format(t[i]))
+        voltage_text.set_text('Voltage = {:.3g} V'.format(input_voltage(t[i])))
+        brake_text.set_text('Brake force = {:.3g} N'
+                            .format(brake_force(t[i])*erf(3*states[4, i])))
         rect.set_xy((states[1, i] - cart_width/2., -cart_height/2))
         A = A_pos(states[1:, i])
         B = B_pos(states[1:, i])
@@ -125,7 +134,8 @@ def animate_system(t, states, A_pos, B_pos, C_pos, filename=None, move_along=Fal
         line.set_data(x_data, y_data)
         spring.set_data((A[0], B[0]), (A[1], B[1]))
         ax.ignore_existing_data_limits = True
-        ax.update_datalim(((states[1, i] - 1.2, -1.5), (states[1, i] + 1.2, 1.5)))
+        ax.update_datalim(((states[1, i] - 1.2, -1.5),
+                           (states[1, i] + 1.2, 1.5)))
         ax.autoscale_view()
         ax.set_aspect("equal")
 

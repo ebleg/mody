@@ -19,7 +19,7 @@ class HybridSimulation(object):
         self.f = f_full
         self.input_voltage_default = input_voltage
         self.brake_force = brake_force
-        self.override_voltage_until = 0
+        self.voltage_breakpoint = [-2]  # This is a bit hacky tbh
 
         self.output = np.zeros((x0.shape[0], t_out.shape[-1]))
         self.t_out = t_out
@@ -33,21 +33,26 @@ class HybridSimulation(object):
         self.stop_time = np.max(self.t_out)
 
     def input_voltage_extended(self, t):
-        if t < self.override_voltage_until:
+        override_voltage = False
+        for point in self.voltage_breakpoint:
+            if point < t < point + 2:
+                override_voltage = True
+
+        if override_voltage:
             return 0
         else:
             return self.input_voltage_default(t)
 
     @staticmethod
     def generate_event_list(pos_fun):
-        events = []
-
-        events.append(lambda t, x: norm(pos_fun[0](x[1:]) - pos_fun[1](x[1:]))
-                                   -2*par.ball_radius)
-
-        events.append(lambda t, x: pos_fun[0](x[1:])[1] - par.ball_radius - par.ground_height)
-        events.append(lambda t, x: pos_fun[1](x[1:])[1] - par.ball_radius - par.ground_height)
-        events.append(lambda t, x: pos_fun[2](x[1:])[1] - par.ball_radius - par.ground_height)
+        events = [lambda t, x: norm(pos_fun[0](x[1:]) - pos_fun[1](x[1:]))
+                  - 2 * par.ball_radius,
+                  lambda t, x: pos_fun[0](x[1:])[1] - par.ball_radius
+                  - par.ground_height,
+                  lambda t, x: pos_fun[1](x[1:])[1] - par.ball_radius
+                  - par.ground_height,
+                  lambda t, x: pos_fun[2](x[1:])[1]  - par.ball_radius
+                   - par.ground_height]
 
         for event in events:
             event.terminal = True  # Stop simulation when event is reached
@@ -86,11 +91,11 @@ class HybridSimulation(object):
 
             alarm = self.check_output(sol.sol)
 
-            if alarm[0] and sol.t[-1] > self.override_voltage_until:  # Alarm raised
+            if alarm[0] and sol.t[-1] > (self.voltage_breakpoint[-1] + 2):
                 print(f"Alarm raised at {alarm[1]}")
                 self.start_state = alarm[2]
                 self.start_time = alarm[1]
-                self.override_voltage_until = alarm[1] + 2
+                self.voltage_breakpoint.append(alarm[1])
 
                 # Append appropriate output in t_out
                 # Compute the index in the global t_out that is closest
@@ -101,7 +106,7 @@ class HybridSimulation(object):
                 self.start_idx = alarm_global_idx
 
             elif sol.status == 1:  # Termination event has occurred
-                print("Collision occured!")
+                print("Collision occurred!")
                 event_idx = self.find_event(sol)
                 if event_idx == 0:
                     flag = 2
@@ -123,7 +128,7 @@ class HybridSimulation(object):
 
         if flag == 1:  # Collision with ground
             self.start_state[-1] *= -par.restitution_coeff
-            self.start_state[-2] *= -par.restitution_coeff ** 2
+            self.start_state[-2] *= -par.restitution_coeff  #** 2
         if flag == 2:  # Collision between balls
             self.start_state[-1] *= -par.restitution_coeff
             # self.start_state[-2] *= -par.restitution_coeff ** 2
