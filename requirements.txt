@@ -1,0 +1,26 @@
+certifi==2020.12.5
+cycler==0.10.0
+dill @ file:///tmp/build/80754af9/dill_1605066453875/work
+flake8 @ file:///tmp/build/80754af9/flake8_1601911421857/work
+importlib-metadata @ file:///tmp/build/80754af9/importlib-metadata_1602276842396/work
+kiwisolver @ file:///C:/ci/kiwisolver_1604014703538/work
+matplotlib @ file:///C:/ci/matplotlib-base_1603355780617/work
+mccabe==0.6.1
+mkl-fft==1.2.0
+mkl-random==1.1.1
+mkl-service==2.3.0
+mpmath==1.1.0
+numpy @ file:///C:/ci/numpy_and_numpy_base_1603466732592/work
+olefile==0.46
+Pillow @ file:///C:/ci/pillow_1609786840597/work
+pycodestyle==2.6.0
+pyflakes==2.2.0
+pyparsing @ file:///home/linux1/recipes/ci/pyparsing_1610983426697/work
+python-dateutil==2.8.1
+scipy @ file:///C:/ci/scipy_1604596260408/work
+sip==4.19.13
+six @ file:///C:/ci/six_1605187374963/work
+sympy @ file:///C:/ci/sympy_1608119646897/work
+tornado @ file:///C:/ci/tornado_1606942392901/work
+wincertstore==0.2
+zipp @ file:///tmp/build/80754af9/zipp_1604001098328/work
