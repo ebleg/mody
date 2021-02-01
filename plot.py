@@ -127,6 +127,7 @@ def animate_system(t, states, A_pos, B_pos, C_pos, filename=None, move_along=Fal
         ax.ignore_existing_data_limits = True
         ax.update_datalim(((states[1, i] - 1.2, -1.5), (states[1, i] + 1.2, 1.5)))
         ax.autoscale_view()
+        ax.set_aspect("equal")
 
         return time_text, rect, line,
 
