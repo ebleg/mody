@@ -1,10 +1,121 @@
 import numpy as np
 from numpy.linalg import norm
-from scipy.integrate import RK45
+from scipy.integrate import solve_ivp
 from scipy.stats import geom
 
 import parameters as par
 import automaton
+
+
+class HybridSimulation(object):
+    def __init__(self, f_full, input_voltage, brake_force, x0, t_out, pos_fun):
+        self.machine_left = automaton.Moore(automaton.machine_output,
+                                            (automaton.dfa_alarm,
+                                             automaton.dfa_no_alarm))
+        self.machine_right = automaton.Moore(automaton.machine_output,
+                                            (automaton.dfa_alarm,
+                                             automaton.dfa_no_alarm))
+
+        self.f = f_full
+        self.input_voltage_default = input_voltage
+        self.brake_force = brake_force
+        self.override_voltage_until = 0
+
+        self.output = np.zeros((x0.shape[0], t_out.shape[-1]))
+        self.t_out = t_out
+        self.dt = t_out[1] - t_out[0]
+        self.pos_fun = pos_fun
+
+        self.events = self.generate_event_list(pos_fun)
+        self.start_state = x0
+        self.start_time = 0
+        self.start_idx = 0
+        self.stop_time = np.max(self.t_out)
+
+    def input_voltage_extended(self, t):
+        if t < self.override_voltage_until:
+            return 0
+        else:
+            return self.input_voltage_default(t)
+
+    @staticmethod
+    def generate_event_list(pos_fun):
+        events = []
+        # for i in range(len(pos_fun)):
+        #     for j in range(len(pos_fun)):
+        #         if j > i:
+        #             events.append(lambda t, x:
+        #                           norm(np.array(pos_fun[i](x[1:]))
+        #                                - np.array(pos_fun[j](x[1:])))
+        #                           - 2*par.ball_radius)
+
+        events.append(lambda t, x: norm(pos_fun[0](x[1:]) - pos_fun[1](x[1:]))
+                                   -2*par.ball_radius)
+
+        events.append(lambda t, x: pos_fun[0](x[1:])[1] - par.ball_radius - par.ground_height)
+        events.append(lambda t, x: pos_fun[1](x[1:])[1] - par.ball_radius - par.ground_height)
+        events.append(lambda t, x: pos_fun[2](x[1:])[1] - par.ball_radius - par.ground_height)
+
+        for event in events:
+            event.terminal = True  # Stop simulation when event is reached
+            event.direction = -1  # Only check crossing from + to -
+
+        return events
+
+    @staticmethod
+    def find_event(sol):
+        for i in range(len(sol.t_events)):
+            if sol.t_events[i].size != 0:
+                break
+        return i
+
+    def simulate_once(self):
+        t_start_output = self.t_out[np.where(self.t_out
+                                             >= self.start_time)[0][0]]
+        sol = solve_ivp(lambda t, x: self.f(t, x,
+                                            self.input_voltage_extended,
+                                            self.brake_force),
+                        (self.start_time, self.stop_time),
+                        self.start_state,
+                        method="RK45",
+                        t_eval=np.arange(t_start_output, self.stop_time,
+                                         self.dt),
+                        events=self.events)
+
+        return sol
+
+    def simulate(self):
+        finished = False
+        while not finished:
+            sol = self.simulate_once()
+            self.output[:, self.start_idx:(self.start_idx + sol.y.shape[-1])] \
+                = sol.y
+            self.start_idx += sol.y.shape[-1]
+
+            if sol.status == 1:  # Termination event has occurred
+                print("Collision occured!")
+                event_idx = self.find_event(sol)
+                if event_idx == 0:
+                    flag = 2
+                else:
+                    flag = 1
+
+                self.reset_after_collision(sol.y_events[event_idx].squeeze(),
+                                           flag)
+                self.start_time = sol.t_events[event_idx][-1]
+            elif sol.status == 0:
+                finished = True
+
+
+    def reset_after_collision(self, state, flag):
+        self.start_state = state
+
+        if flag == 1:  # Collision with ground
+            self.start_state[-1] *= -par.restitution_coeff
+            self.start_state[-2] *= -par.restitution_coeff ** 2
+        if flag == 2:  # Collision between balls
+            self.start_state[-1] *= -par.restitution_coeff
+            # self.start_state[-2] *= -par.restitution_coeff ** 2
 
 
 def simulate_hybrid(f_full, input_voltage, brake_force, x0, t_out, pos_fun):
@@ -117,49 +228,6 @@ def simulate_hybrid(f_full, input_voltage, brake_force, x0, t_out, pos_fun):
 
     return y
 
-
-def check_collision(qdq, pos_fun):
-    # pos_fun: list of functions (of qdq) that determine the position of a ball
-    # in the inertial frame
-
-    # -- Collisions between balls
-    # Construct matrix with relative distances between all the balls
-
-    n_balls = len(pos_fun)
-    n_steps = qdq.shape[-1]
-    collision_step = None
-
-    dist_mat = np.empty((n_balls, n_balls), dtype="float")
-
-    for k in range(n_steps):
-        for i in range(n_balls):
-            for j in range(n_balls):
-                # Compute distance between each of the balls
-                if i != j:
-                    dist_mat[i, j] = norm(np.array(pos_fun[i](qdq[:, k]))
-                                          - np.array(pos_fun[j](qdq[:, k])))
-                else:  # Avoid comparison of ball with itself
-                    dist_mat[i, j] = np.inf
-
-        min_dist_loc = np.unravel_index(np.argmin(dist_mat), dist_mat.shape)
-        if dist_mat[min_dist_loc] <= 2*par.ball_radius:
-            print("Collision between balls detected!")
-            collision_step = k
-            break
-
-        # -- Collisions with ground
-        heights = np.fromiter((
-            ball_pos(qdq[:, k])[1] for ball_pos in pos_fun), dtype=np.float)
-        min_height_loc = np.argmin(heights)
-
-        if heights[min_height_loc] < (par.ball_radius + par.ground_height):
-            print("Collision with ground detected")
-            collision_step = k
-            break
-
-    return collision_step
-
-
 def emulate_sensor(y_in, threshold):
     # Expect a Boolean array
     finished = False
@@ -177,23 +245,6 @@ def emulate_sensor(y_in, threshold):
     return y_out.astype(np.short)
 
 
-def reset(state, flag):
-    state_new = state.copy()
+# if __name__ == "__main__":
+     # HybridSimulation()
 
-    if flag == 0:  # Exceed angular velocity
-        pass
-    if flag == 1:  # Collision with ground
-        state_new[-1] *= -par.restitution_coeff
-        state_new[-2] *= -par.restitution_coeff**2
-    if flag == 2:  # Collision between balls
-        state_new[-1] *= -par.restitution_coeff
-        state_new[-2] *= -par.restitution_coeff**2
-
-    return state_new
-
-
-if __name__ == "__main__":
-    test = np.random.random(size=20)*10
-    test_faults = emulate_sensor(test, 7)
-    for i in range(len(test)):
-        print(f"{test[i]}  {test_faults[i]}")

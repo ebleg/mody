@@ -1,5 +1,6 @@
 import numpy as np
 from scipy.integrate import cumtrapz
+from scipy.special import erf
 from matplotlib.patches import Rectangle
 import matplotlib.pyplot as plt
 import matplotlib as mpl
@@ -18,54 +19,56 @@ plt.rc("axes", grid=True)
 plt.rc("axes", xmargin=0)
 # plt.rc("text", usetex=True)
 plt.rc('axes', axisbelow=True)
+plt.rc("figure", autolayout=False)
 
 mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=["#2ecc71", "#3498db",
                                                     "#e74c3c", "#f1c40f",
                                                     "#e67e22", "#9b59b6"])
 
-
 def plot_states(states, which_states, t):
     titles = ("Motor current", "Cart position", "Pendulum angle",
               "Link angle", "Cart speed", "Pendulum angular velocity",
               "Link angular velocity")
-    ylabels = ("$i$ (A)", "$q_1$ (m)", "$q_2$ ($^\\circ$)",
-               "$q_3$ ($^\\circ$)", "$\\dot{q}_1$ (m/s)",
-               "$\\dot{q}_2$ ($^\\circ/s$)", "$\\dot{q}_3$ ($^\\circ/s$)")
+    ylabels = ("$i$ (A)", "$q_1$ (m)",
+               "$q_2$ ($^\\circ$)",
+               "$q_3$ ($^\\circ$)",
+               "$\\dot{q}_1$ (m/s)",
+               "$\\dot{q}_2$ ($^\\circ/s$)",
+               "$\\dot{q}_3$ ($^\\circ/s$)")
 
     fig, ax = plt.subplots(len(which_states), 1, sharex=True)
     fig.set_size_inches((fig.get_size_inches()[0],
-                        fig.get_size_inches()[1]*(1+.1*len(which_states))))
+                         fig.get_size_inches()[1]*1.2*len(which_states)/7))
     k = 0
     for i in which_states:
         ax[k].plot(t, states[i, :])
-        ax[k].set_title(titles[i])
-        ax[k].set_ylabel(ylabels[i])
+        # ax[k].set_title(titles[i])
+        ax[k].set_ylabel(ylabels[i], rotation="vertical")
         k += 1
 
+    ax[-1].set_xlabel("Time (s)")
     fig.tight_layout(pad=0.3)
-    fig.show()
-
     return fig, ax
 
 
-def plot_energy(states, t, U, F_brake, V, T, ax=None):
+def plot_energy(states, t, input_voltage, brake_force, V, T, ax=None):
     V_rn = V(states[1:, :])
     V_rn -= np.min(V_rn)
     T_rn = T(states[1:, :])
     # T_cart = 0.5*par.m_point[0]*states[4,:]**2
     # T_rest = T_rn - T_cart
-    E_total = cumtrapz(np.vectorize(U)(t)*states[0, :], t, initial=0)
+    E_total = cumtrapz(np.vectorize(input_voltage)(t)*states[0, :], t, initial=0)
     E_total += V_rn[0]
-    E_in_brake = cumtrapz(np.vectorize(F_brake)(t)
-                          * states[4, :], states[1, :], initial=0)
+    E_in_brake = cumtrapz(np.vectorize(brake_force)(t)
+                          *erf(3*states[4, :]), states[1, :], initial=0)
     E_inductor = cumtrapz(par.L_A*states[0, :], states[0, :], initial=0)
     losses_electric = cumtrapz(states[0, :]**2*par.R_A,
                                t, initial=0)
     losses_mechanical = (E_total - losses_electric - V_rn
                          - T_rn - E_in_brake - E_inductor)
 
-    if ax is None:
-        fig, ax = plt.subplots()
+    # if ax is None:
+    #    fig, ax = plt.subplots()
 
     ax.stackplot(t, V_rn, T_rn, E_in_brake,
                  losses_mechanical, losses_electric, E_inductor,
@@ -81,18 +84,19 @@ def animate_system(t, states, A_pos, B_pos, C_pos, filename=None):
     # Adapted from https://www.moorepants.info/blog/npendulum.html
 
     fig = plt.figure()
-    cart_width = 0.4
-    cart_height = 0.4
+    cart_width = 0.2
+    cart_height = 0.2
 
     ax = plt.axes(xlim=(-1.2, np.max(states[1, :]) + 1.2),
                   ylim=(-0.5, 2))
+    ax.plot([-50, 50], [par.ground_height, par.ground_height], color="black")
     ax.axis("equal")
     ax.set_xlim((-1.2, np.max(states[1, :]) + 1.2))
     ax.set_ylim((-0.5, 2))
     time_text = ax.text(0.04, 0.9, '', transform=ax.transAxes)
 
     # Draw the cart
-    rect = Rectangle([states[0, 0] - cart_width/2., -cart_height/2.],
+    rect = Rectangle((states[0, 0] - cart_width/2., -cart_height/2.),
                      cart_width, cart_height, fill=True, color='red',
                      ec='black')
     ax.add_patch(rect)
@@ -100,8 +104,9 @@ def animate_system(t, states, A_pos, B_pos, C_pos, filename=None):
     ax.invert_yaxis()
 
     # Empty line for pendulum
-    line, = ax.plot([], [], lw=2, marker="o", markersize=6, color="black")
+    line, = ax.plot([], [], lw=2, marker="o", markersize=10, color="black")
     spring, = ax.plot([], [], lw=2, color="grey")
+
 
     def init():
         time_text.set_text("")
