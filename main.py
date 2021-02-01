@@ -121,7 +121,7 @@ fig.savefig("media/energy.eps")
 # plot.animate_system(t_sim, y_sim, input_voltage, brake_force, A_pos, B_pos,
 #                     C_pos, filename="media/simulation.gif")
 #
-# plot.animate_system(t_ver, y_ver, input_voltage, brake_force, A_pos, B_pos,
+# plot.animate_system(t_ver, y_ver, lambda t: 0, lambda t: 0, A_pos, B_pos,
 #                     C_pos, filename="media/verification.gif")
 
 
